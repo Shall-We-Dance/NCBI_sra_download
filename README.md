@@ -44,14 +44,10 @@ Example conda environment (`ncbi_sra_download`) configuration:
 conda create -n ncbi_sra_download sra-tools pigz -c bioconda
 ```
 
----
-
 ## Output
 
 * `.fastq.gz` files will be saved in the same directory as the input SRR list
 * Temporary `.sra` directories are automatically removed after conversion
-
----
 
 ## Notes
 
@@ -62,8 +58,6 @@ conda create -n ncbi_sra_download sra-tools pigz -c bioconda
   ```bash
   chmod +x download_sra.sh
   ```
-
----
 
 ## Troubleshooting
 
