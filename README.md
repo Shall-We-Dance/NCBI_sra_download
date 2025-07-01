@@ -23,9 +23,9 @@ A Bash script for downloading sequencing data from the NCBI SRA database, conver
 ### Options
 
 * `--cores N`   Number of CPU threads per SRR conversion (default: 1/4 of total CPU cores).
-* `--parallel N`  Number of parallel SRR processes (default: 4).
+* `--parallel N` Number of parallel SRR processes (default: 4).
 * `--mem XMB`   Memory allocated per conversion in MB (default: 4096MB).
-* `-h`, `--help`  Show usage and exit.
+* `-h`, `--help`   Show usage and exit.
 
 ### Example
 
