@@ -1,6 +1,6 @@
 # NCBI SRA Download Script
 
-A Bash script for downloading sequencing data from the NCBI SRA database, converting `.sra` files to `.fastq`, compressing the output, and cleaning up intermediate files. This version adds parallel processing, progress bars, improved error handling, and enhanced logging.
+A Bash script for downloading sequencing data from the NCBI SRA database, converting `.sra` files to `.fastq`, compressing the output, and cleaning up intermediate files. This version adds parallel processing, progress bars, error handling, command-line configuration, and enhanced logging.
 
 ## Features
 
@@ -9,25 +9,29 @@ A Bash script for downloading sequencing data from the NCBI SRA database, conver
 * Parallel compression of FASTQ files with `pigz`.
 * Automatic cleanup of intermediate SRA folders.
 * Fail-safe mechanism that logs failed SRR downloads or conversions.
+* Adjustable CPU and memory usage per job.
 * Color-coded log output to indicate download, warning, and error statuses.
 * Automatically activates a conda environment with the required tools.
+* Built-in `--help` system and input validation.
 
 ## Usage
 
 ```bash
-./download_sra.sh <srr_list.txt>
+./download_sra.sh <srr_list.txt> [--cores N] [--parallel N] [--mem XMB]
 ```
+
+### Options
+
+* `--cores N`   Number of CPU threads per SRR conversion (default: 1/4 of total CPU cores).
+* `--parallel N`  Number of parallel SRR processes (default: 4).
+* `--mem XMB`   Memory allocated per conversion in MB (default: 4096MB).
+* `-h`, `--help`  Show usage and exit.
 
 ### Example
 
 ```bash
-./download_sra.sh ./SRR_Acc_list.txt
+./download_sra.sh SRR_Acc_list.txt --cores 8 --parallel 2 --mem 8192MB
 ```
-
-The script expects:
-
-* A plain text file (`srr_list.txt`) with one SRR accession per line. This list can be generated from the NCBI SRA website.
-* A conda environment with required tools installed.
 
 ## Requirements
 
@@ -55,10 +59,9 @@ conda create -n ncbi_sra_download sra-tools pigz pv -c bioconda
 
 ## Notes
 
-* Uses `1/4` of available CPU threads for downloading and conversion.
-* Uses 16 threads for compression via `pigz`.
-* `pv` is used for progress bars during download and conversion (if installed).
-* The script must be executable:
+* Default settings use moderate CPU/memory. Customize with `--cores`, `--parallel`, and `--mem`.
+* The script prints configuration at runtime.
+* Must be executable:
 
   ```bash
   chmod +x download_sra.sh
@@ -66,9 +69,8 @@ conda create -n ncbi_sra_download sra-tools pigz pv -c bioconda
 
 ## Troubleshooting
 
-* Ensure all required tools are installed and accessible in the `ncbi_sra_download` conda environment.
-* If conda is not found, make sure it's in your `PATH` or adjust the script accordingly.
-* If no progress is shown during download or conversion, ensure that `pv` is installed and available in your system path.
+* Check that conda and all required tools are available in your `PATH`.
+* Use `--help` to check valid usage.
 
 ## License
 
