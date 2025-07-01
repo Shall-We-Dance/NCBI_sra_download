@@ -40,7 +40,7 @@ A Bash script for downloading sequencing data from the NCBI SRA database, conver
 * [conda](https://docs.conda.io/en/latest/)
 * [sra-tools](https://github.com/ncbi/sra-tools) (must include `fasterq-dump`, `sra-info`, `prefetch`)
 * [pigz](https://zlib.net/pigz/)
-* [pv](https://github.com/atheme/pv) (for progress bar)
+* pv (for progress bar)
 
 ### Conda Environment
 
