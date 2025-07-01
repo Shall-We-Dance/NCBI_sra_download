@@ -17,20 +17,21 @@ A Bash script for downloading sequencing data from the NCBI SRA database, conver
 ## Usage
 
 ```bash
-./download_sra.sh <srr_list.txt> [--cores N] [--parallel N] [--mem XMB]
+NCBI SRA Download Script v2.1.0
+
+Usage: ncbi_sra_download.sh <srr_list.txt> [--cores N] [--parallel N] [--mem XMB]
+
+Options:
+  --cores N       Number of CPU threads per SRR process (default: 1/4 of total cores)
+  --parallel N    Number of parallel SRR downloads/conversions (default: 4)
+  --mem XMB       Memory per conversion in MB (default: 4096MB)
+  -h, --help      Show this help message and exit
 ```
-
-### Options
-
-* `--cores N` Number of CPU threads per SRR conversion (default: 1/4 of total CPU cores).
-* `--parallel N` Number of parallel SRR processes (default: 4).
-* `--mem XMB` Memory allocated per conversion in MB (default: 4096MB).
-* `-h`, `--help` Show usage and exit.
 
 ### Example
 
 ```bash
-./download_sra.sh SRR_Acc_list.txt --cores 8 --parallel 2 --mem 8192MB
+./ncbi_sra_download.sh SRR_Acc_list.txt --cores 8 --parallel 2 --mem 8192MB
 ```
 
 ## Requirements
