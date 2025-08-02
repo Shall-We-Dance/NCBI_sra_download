@@ -17,15 +17,21 @@ A Bash script for downloading sequencing data from the NCBI SRA database, conver
 ## Usage
 
 ```bash
-NCBI SRA Download Script v2.1.0
+NCBI SRA Download Script v2.2.0
 
-Usage: ncbi_sra_download.sh <srr_list.txt> [--cores N] [--parallel N] [--mem XMB]
+Usage: ncbi_sra_download.sh <srr_list.txt> [--cores N] [--parallel N] [--mem SIZE] [--env NAME] [-h|--help]
+
+Downloads and converts SRA files to compressed FASTQ in parallel.
+
+Required:
+  <srr_list.txt>    A file containing one SRR accession ID per line.
 
 Options:
-  --cores N       Number of CPU threads per SRR process (default: 1/4 of total cores)
-  --parallel N    Number of parallel SRR downloads/conversions (default: 4)
-  --mem XMB       Memory per conversion in MB (default: 4096MB)
-  -h, --help      Show this help message and exit
+  --cores N         Number of CPU threads per conversion job (default: max/4)
+  --parallel N      Number of parallel downloads/conversions (default: 4)
+  --mem SIZE        Memory per conversion job, e.g., 8G, 4096M (default: 4G)
+  --env NAME        Name of the Conda environment to use (default: ncbi_sra_download)
+  -h, --help        Show this help message and exit
 ```
 
 ### Example
