@@ -75,7 +75,7 @@ conda create -n ncbi_sra_download sra-tools pigz pv -c bioconda
 * Must be executable:
 
   ```bash
-  chmod +x download_sra.sh
+  chmod +x ncbi_sra_download.sh
   ```
 
 ## Troubleshooting
