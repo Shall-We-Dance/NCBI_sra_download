@@ -37,7 +37,11 @@ Options:
 ### Example
 
 ```bash
-./ncbi_sra_download.sh SRR_Acc_list.txt --cores 8 --parallel 2 --mem 8192MB
+# Download and convert SRR IDs listed in SRR_Acc_list.txt using default settings
+./ncbi_sra_download.sh SRR_Acc_list.txt
+
+# Download with custom settings: 8 cores, 2 parallel jobs, 8GB memory, and a specific conda environment
+./ncbi_sra_download.sh SRR_Acc_list.txt --cores 8 --parallel 2 --mem 8G --env your_env_name
 ```
 
 ## Requirements
