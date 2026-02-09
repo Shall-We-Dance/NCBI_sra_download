@@ -21,7 +21,7 @@ CONDA_ENV_NAME="ncbi_sra_download"
 # --- Functions ---
 show_help() {
   cat << EOF
-Usage: $0 <srr_list.txt> [OPTIONS]
+Usage: $0 [OPTIONS] <srr_list.txt>
 
 Downloads and converts SRA files to compressed FASTQ in parallel.
 
@@ -58,8 +58,8 @@ while true; do
   esac
 done
 
-# Check for mandatory input file
-LIST_FILE=$1
+# Check for mandatory input file (safe under `set -u`)
+LIST_FILE="${1:-}"
 if [[ -z "$LIST_FILE" ]]; then
   echo "Error: No SRR list file provided." >&2
   show_help
