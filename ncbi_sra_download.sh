@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ###########################################
-#     NCBI SRA Download Script v2.2.0       #
-#   CLI Output + Robust + Parallel + Safe   #
+#     NCBI SRA Download Script v2.3.0       #
+#   Clean CLI + Robust + Parallel + Safe    #
 # ###########################################
 
 # --- Strict Mode ---
@@ -67,7 +67,7 @@ if [[ -z "$LIST_FILE" ]]; then
 fi
 
 # --- Pre-run Checks ---
-echo -e "NCBI SRA Download Script v3.1.0\n"
+echo -e "NCBI SRA Download Script v2.3.0\n"
 
 # Validate input file
 if [ ! -f "$LIST_FILE" ]; then echo "Error: File not found: $LIST_FILE" >&2; exit 1; fi
@@ -82,7 +82,7 @@ fi
 source "$(dirname "$(command -v conda)")/../bin/activate" "$CONDA_ENV_NAME"
 
 # Check for required tools
-for tool in prefetch fasterq-dump pigz pv; do
+for tool in prefetch fasterq-dump pigz; do
   if ! command -v $tool &> /dev/null; then
     echo "Error: Required tool '$tool' not found in environment '$CONDA_ENV_NAME'." >&2
     exit 1
@@ -94,11 +94,15 @@ OUTDIR=$(dirname "$LIST_FILE")
 LOGFILE="${OUTDIR}/sra_download.log"
 FAILED_LOG="${OUTDIR}/sra_failed.log"
 SUCCESS_LOG="${OUTDIR}/sra_success.log"
+LOG_DIR="${OUTDIR}/logs"
+LOCK_FILE="${OUTDIR}/.sra_download.lock"
 mkdir -p "$OUTDIR"
+mkdir -p "$LOG_DIR"
 # Clear previous logs
 > "$LOGFILE"
 > "$FAILED_LOG"
 > "$SUCCESS_LOG"
+> "$LOCK_FILE"
 
 # Read, validate, and de-duplicate SRR list
 readarray -t ALL_SRRS < <(grep -o 'SRR[0-9]\+' "$LIST_FILE" | sort -u)
@@ -120,68 +124,76 @@ echo "Logging to: $LOGFILE"
 echo "Starting processing..."
 
 # --- Main Processing Function ---
+log_msg() {
+  local message=$1
+  flock "$LOCK_FILE" bash -c "printf '%s %s\n' \"[$(date '+%H:%M:%S')]\" \"$message\""
+}
+
 process_srr() {
   local SRR=$1
   local INDEX=$2
   local TOTAL_COUNT=$3
+  local JOB_LOG="${LOG_DIR}/${SRR}.log"
 
-  echo -e "\n\033[1;34m[$INDEX/$TOTAL_COUNT] Processing $SRR\033[0m"
+  log_msg "\033[1;34m[$INDEX/$TOTAL_COUNT] Starting ${SRR}\033[0m"
 
   # Skip if already processed
   if [ -f "$OUTDIR/${SRR}_1.fastq.gz" ] || [ -f "$OUTDIR/${SRR}.fastq.gz" ]; then
-    echo -e "\033[32m[$SRR] Already exists. Skipping.\033[0m"
+    log_msg "\033[32m[$SRR] Already exists. Skipping.\033[0m"
     echo "$SRR" >> "$SUCCESS_LOG"
     return 0
   fi
 
   # Run prefetch
-  echo "[$SRR] Downloading..."
-  prefetch "$SRR" --output-directory "$OUTDIR" --max-size 100G
+  log_msg "[$SRR] Downloading..."
+  prefetch "$SRR" --output-directory "$OUTDIR" --max-size 100G >> "$JOB_LOG" 2>&1
 
   # Run fasterq-dump
-  echo "[$SRR] Converting to FASTQ..."
-  fasterq-dump "$SRR" --outdir "$OUTDIR" --mem "$MEMORY" --split-files --threads "$CPU_THREADS" --progress
+  log_msg "[$SRR] Converting to FASTQ..."
+  fasterq-dump "$SRR" --outdir "$OUTDIR" --mem "$MEMORY" --split-files --threads "$CPU_THREADS" >> "$JOB_LOG" 2>&1
 
   # Compress FASTQ files
   for fq in "$OUTDIR"/${SRR}*.fastq; do
     if [ -s "$fq" ]; then
-      echo "[$SRR] Compressing $fq..."
-      pv "$fq" | pigz -p "$CPU_THREADS" > "${fq}.gz"
+      log_msg "[$SRR] Compressing $(basename "$fq")..."
+      pigz -p "$CPU_THREADS" -c "$fq" > "${fq}.gz"
       rm "$fq"
     fi
   done
 
   local SRR_DIR="${OUTDIR}/${SRR}"
   if [ -d "$SRR_DIR" ]; then
-      echo "[$SRR] Cleaning up intermediate directory..."
+      log_msg "[$SRR] Cleaning up intermediate directory..."
       rm -rf "$SRR_DIR"
   fi
   
   echo "$SRR" >> "$SUCCESS_LOG"
-  echo -e "\033[32m[$SRR] Done.\033[0m"
+  log_msg "\033[32m[$SRR] Done.\033[0m"
 }
 
 # Export function and variables for parallel execution
 export -f process_srr
-export OUTDIR MEMORY CPU_THREADS SUCCESS_LOG
+export -f log_msg
+export OUTDIR MEMORY CPU_THREADS SUCCESS_LOG LOG_DIR LOCK_FILE
 
 # --- Parallel Execution ---
-CURRENT=0
 process_wrapper() {
-    local srr=$1
-    CURRENT=$((CURRENT + 1))
-    if process_srr "$srr" "$CURRENT" "$TOTAL"; then
+    local index=$1
+    local srr=$2
+    if process_srr "$srr" "$index" "$TOTAL"; then
         :
     else
-        echo -e "\033[1;31m[$srr] FAILED. See log for error details.\033[0m"
+        log_msg "\033[1;31m[$srr] FAILED. See ${LOG_DIR}/${srr}.log for details.\033[0m"
         echo "$srr" >> "$FAILED_LOG"
     fi
 }
 export -f process_wrapper
-export CURRENT TOTAL FAILED_LOG
+export TOTAL FAILED_LOG
 
-# Pipe the validated list to xargs, sending output to both CLI and log file
-printf "%s\n" "${ALL_SRRS[@]}" | xargs -P "$PARALLEL_JOBS" -I {} bash -c 'process_wrapper "{}"' 2>&1 | tee -a "$LOGFILE"
+# Pipe indexed SRR list to xargs, sending output to both CLI and log file
+for i in "${!ALL_SRRS[@]}"; do
+  printf "%s %s\n" "$((i + 1))" "${ALL_SRRS[$i]}"
+done | xargs -P "$PARALLEL_JOBS" -n 2 bash -c 'process_wrapper "$1" "$2"' _ 2>&1 | tee -a "$LOGFILE"
 
 # --- Final Summary ---
 SUCCESS_COUNT=$(wc -l < "$SUCCESS_LOG")
