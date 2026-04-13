@@ -123,10 +123,16 @@ echo "---------------------"
 echo "Logging to: $LOGFILE"
 echo "Starting processing..."
 
+# --- CLI Colors ---
+COLOR_GREEN='\033[32m'
+COLOR_YELLOW='\033[33m'
+COLOR_RED='\033[31m'
+COLOR_RESET='\033[0m'
+
 # --- Main Processing Function ---
 log_msg() {
   local message=$1
-  flock "$LOCK_FILE" bash -c "printf '%s %s\n' \"[$(date '+%H:%M:%S')]\" \"$message\""
+  flock "$LOCK_FILE" bash -c "printf '%s %b\n' \"[$(date '+%H:%M:%S')]\" \"$message\""
 }
 
 process_srr() {
@@ -135,11 +141,11 @@ process_srr() {
   local TOTAL_COUNT=$3
   local JOB_LOG="${LOG_DIR}/${SRR}.log"
 
-  log_msg "\033[1;34m[$INDEX/$TOTAL_COUNT] Starting ${SRR}\033[0m"
+  log_msg "${COLOR_GREEN}[$INDEX/$TOTAL_COUNT] Starting ${SRR}${COLOR_RESET}"
 
   # Skip if already processed
   if [ -f "$OUTDIR/${SRR}_1.fastq.gz" ] || [ -f "$OUTDIR/${SRR}.fastq.gz" ]; then
-    log_msg "\033[32m[$SRR] Already exists. Skipping.\033[0m"
+    log_msg "${COLOR_YELLOW}[$SRR] Already exists. Skipping.${COLOR_RESET}"
     echo "$SRR" >> "$SUCCESS_LOG"
     return 0
   fi
@@ -168,13 +174,14 @@ process_srr() {
   fi
   
   echo "$SRR" >> "$SUCCESS_LOG"
-  log_msg "\033[32m[$SRR] Done.\033[0m"
+  log_msg "${COLOR_GREEN}[$SRR] Done.${COLOR_RESET}"
 }
 
 # Export function and variables for parallel execution
 export -f process_srr
 export -f log_msg
 export OUTDIR MEMORY CPU_THREADS SUCCESS_LOG LOG_DIR LOCK_FILE
+export COLOR_GREEN COLOR_YELLOW COLOR_RED COLOR_RESET
 
 # --- Parallel Execution ---
 process_wrapper() {
@@ -183,7 +190,7 @@ process_wrapper() {
     if process_srr "$srr" "$index" "$TOTAL"; then
         :
     else
-        log_msg "\033[1;31m[$srr] FAILED. See ${LOG_DIR}/${srr}.log for details.\033[0m"
+        log_msg "${COLOR_RED}[$srr] FAILED. See ${LOG_DIR}/${srr}.log for details.${COLOR_RESET}"
         echo "$srr" >> "$FAILED_LOG"
     fi
 }
