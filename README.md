@@ -1,25 +1,27 @@
 # NCBI SRA Download Script
 
-A Bash script for downloading sequencing data from the NCBI SRA database, converting `.sra` files to `.fastq`, compressing the output, and cleaning up intermediate files. This version adds parallel processing, progress bars, error handling, command-line configuration, and enhanced logging.
+A Bash script for downloading sequencing data from the NCBI SRA database, converting SRA accessions to FASTQ files, compressing the output, and cleaning up intermediate files.
 
 ## Features
 
 * Batch download of SRA data from NCBI using a list of SRR accession numbers.
-* FASTQ conversion via `fasterq-dump` with progress monitoring.
-* Parallel compression of FASTQ files with `pigz`.
+* SRR ID extraction, validation, sorting, and de-duplication from the input list.
+* Parallel download and FASTQ conversion with `prefetch`, `fasterq-dump`, and `xargs`.
+* FASTQ compression with `pigz`.
 * Automatic cleanup of intermediate SRA folders.
-* Fail-safe mechanism that logs failed SRR downloads or conversions.
+* Success and failure tracking through separate log files.
 * Adjustable CPU and memory usage per job.
-* Color-coded log output to indicate download, warning, and error statuses.
+* Timestamped, color-coded CLI status output with lock-protected message printing.
+* Per-SRR job logs under a `logs/` directory.
 * Automatically activates a conda environment with the required tools.
 * Built-in `--help` system and input validation.
 
 ## Usage
 
 ```bash
-NCBI SRA Download Script v2.2.0
+NCBI SRA Download Script v2.3.0
 
-Usage: ncbi_sra_download.sh <srr_list.txt> [--cores N] [--parallel N] [--mem SIZE] [--env NAME] [-h|--help]
+Usage: ./ncbi_sra_download.sh [OPTIONS] <srr_list.txt>
 
 Downloads and converts SRA files to compressed FASTQ in parallel.
 
@@ -27,7 +29,7 @@ Required:
   <srr_list.txt>    A file containing one SRR accession ID per line.
 
 Options:
-  --cores N         Number of CPU threads per conversion job (default: max/4)
+  --cores N         Number of CPU threads per conversion job (default: 1/4 of detected CPUs, minimum 1)
   --parallel N      Number of parallel downloads/conversions (default: 4)
   --mem SIZE        Memory per conversion job, e.g., 8G, 4096M (default: 4G)
   --env NAME        Name of the Conda environment to use (default: ncbi_sra_download)
@@ -41,36 +43,42 @@ Options:
 ./ncbi_sra_download.sh SRR_Acc_list.txt
 
 # Download with custom settings: 8 cores, 2 parallel jobs, 8GB memory, and a specific conda environment
-./ncbi_sra_download.sh SRR_Acc_list.txt --cores 8 --parallel 2 --mem 8G --env your_env_name
+./ncbi_sra_download.sh --cores 8 --parallel 2 --mem 8G --env your_env_name SRR_Acc_list.txt
 ```
 
 ## Requirements
 
 ### Software
 
+* Bash 4+ with `readarray`
+* A GNU/Linux-style shell environment with `/proc/cpuinfo`, `getopt`, `flock`, `grep`, `sort`, and `xargs`
 * [conda](https://docs.conda.io/en/latest/)
-* [sra-tools](https://github.com/ncbi/sra-tools) (must include `fasterq-dump`, `sra-info`, `prefetch`)
+* [sra-tools](https://github.com/ncbi/sra-tools) (must include `fasterq-dump` and `prefetch`)
 * [pigz](https://zlib.net/pigz/)
-* pv (for progress bar)
 
 ### Conda Environment
 
 Example conda environment (`ncbi_sra_download`) configuration:
 
 ```bash
-conda create -n ncbi_sra_download sra-tools pigz pv -c bioconda
+conda create -n ncbi_sra_download sra-tools pigz -c bioconda
 ```
 
 ## Output
 
 * `.fastq.gz` files will be saved in the same directory as the input SRR list.
 * Temporary `.sra` directories are automatically removed after conversion.
-* A log file (`sra_download.log`) is generated, with detailed progress and errors.
-* Failed SRRs are logged in a separate file (`sra_failed.log`), created only if there are failures.
+* `sra_download.log` captures the timestamped top-level status output.
+* `logs/<SRR>.log` captures detailed `prefetch` and `fasterq-dump` output for each SRR.
+* `sra_success.log` and `sra_failed.log` are reset at the start of each run and record completed or failed SRRs.
+* `.sra_download.lock` is created in the output directory to coordinate parallel status messages.
 
 ## Notes
 
 * Default settings use moderate CPU/memory. Customize with `--cores`, `--parallel`, and `--mem`.
+* Existing `<SRR>_1.fastq.gz` or `<SRR>.fastq.gz` outputs are treated as already processed and logged as successful.
+* Input files can contain extra text, but only `SRR` accessions matching `SRR[0-9]+` are processed.
+* Runtime logs are overwritten at the start of each run.
 * The script prints configuration at runtime.
 * Must be executable:
 
@@ -81,6 +89,7 @@ conda create -n ncbi_sra_download sra-tools pigz pv -c bioconda
 ## Troubleshooting
 
 * Check that conda and all required tools are available in your `PATH`.
+* Run in a Linux, WSL, or compatible HPC shell environment; the current script reads CPU count from `/proc/cpuinfo` and uses `flock`.
 * Use `--help` to check valid usage.
 
 ## License
